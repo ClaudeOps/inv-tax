@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Capital Gains & Dividend Tax Calculator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Playfair+Display:wght@400;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #21262d;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --green: #3fb950;
+    --yellow: #d29922;
+    --red: #f85149;
+    --accent: #58a6ff;
+    --orange: #e07b39;
+    --niit-color: #bc8cff;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.4rem, 4vw, 2rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.25rem;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 0.78rem;
+    margin-bottom: 2rem;
+    letter-spacing: 0.05em;
+  }
+
+  .container { max-width: 860px; margin: 0 auto; }
+
+  .header-badge {
+    display: inline-block;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 0.7rem;
+    color: var(--accent);
+    padding: 2px 8px;
+    margin-bottom: 1rem;
+    letter-spacing: 0.1em;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .panel-title {
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .slider-group { margin-bottom: 1.5rem; }
+  .slider-group:last-child { margin-bottom: 0; }
+
+  .slider-label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.4rem;
+  }
+
+  .slider-label { font-size: 0.8rem; color: var(--text); }
+  .slider-label small { font-size: 0.68rem; color: var(--muted); margin-left: 0.5rem; }
+  .slider-sources {
+    font-size: 0.66rem; color: var(--muted);
+    margin-bottom: 0.55rem; line-height: 1.5;
+    padding: 0.3rem 0.5rem;
+    background: rgba(255,255,255,0.03);
+    border-left: 2px solid var(--border);
+    border-radius: 0 3px 3px 0;
+  }
+
+  .slider-value { font-size: 1.05rem; font-weight: 500; color: var(--accent); }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%; height: 4px;
+    border-radius: 2px;
+    background: var(--border);
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type=range].div-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 18px; height: 18px;
+    border-radius: 50%; background: var(--green);
+    border: 2px solid var(--bg); cursor: pointer; transition: transform 0.1s;
+  }
+  input[type=range].cg-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 18px; height: 18px;
+    border-radius: 50%; background: var(--yellow);
+    border: 2px solid var(--bg); cursor: pointer; transition: transform 0.1s;
+  }
+  input[type=range].oi-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 18px; height: 18px;
+    border-radius: 50%; background: var(--orange);
+    border: 2px solid var(--bg); cursor: pointer; transition: transform 0.1s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+  .bracket-track {
+    position: relative; height: 52px;
+    border-radius: 6px; overflow: hidden;
+    background: var(--surface2); border: 1px solid var(--border);
+  }
+
+  .bracket-segment {
+    position: absolute; top: 0; bottom: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.68rem; transition: width 0.3s ease;
+    overflow: hidden; white-space: nowrap;
+  }
+
+  .seg-oi     { background: rgba(224,123,57,0.30); border-right: 1px solid rgba(224,123,57,0.6); color: var(--orange); }
+  .seg-zero   { background: rgba(63,185,80,0.25);  border-right: 1px solid rgba(63,185,80,0.5);  color: var(--green); }
+  .seg-fifteen{ background: rgba(210,153,34,0.25); border-right: 1px solid rgba(210,153,34,0.5); color: var(--yellow); }
+  .seg-twenty { background: rgba(248,81,73,0.2);   color: var(--red); }
+
+  .stack-label {
+    font-size: 0.68rem; letter-spacing: 0.1em;
+    color: var(--muted); text-transform: uppercase; margin-bottom: 0.5rem;
+  }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+    gap: 1rem; margin-bottom: 1.25rem;
+  }
+
+  .metric-card {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; padding: 1rem;
+  }
+
+  .metric-label {
+    font-size: 0.65rem; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem;
+  }
+
+  .metric-value { font-size: 1.2rem; font-weight: 500; }
+  .metric-sub   { font-size: 0.68rem; color: var(--muted); margin-top: 0.2rem; }
+
+  .color-green  { color: var(--green); }
+  .color-yellow { color: var(--yellow); }
+  .color-red    { color: var(--red); }
+  .color-orange { color: var(--orange); }
+  .color-purple { color: var(--niit-color); }
+  .color-accent { color: var(--accent); }
+
+  .chart-area { position: relative; height: 260px; margin-top: 0.5rem; }
+  canvas { width: 100% !important; height: 100% !important; }
+
+  .breakdown-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.55rem 0; border-bottom: 1px solid var(--border); font-size: 0.82rem;
+  }
+  .breakdown-row:last-child { border-bottom: none; }
+  .breakdown-label { color: var(--muted); }
+  .breakdown-value { font-weight: 500; }
+
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+
+  .callout {
+    background: rgba(88,166,255,0.07);
+    border: 1px solid rgba(88,166,255,0.25);
+    border-radius: 6px; padding: 0.85rem 1rem;
+    font-size: 0.78rem; color: var(--muted); line-height: 1.6;
+  }
+  .callout strong { color: var(--accent); }
+
+  /* Ordinary income separator in bracket */
+  .oi-note {
+    font-size: 0.68rem; color: var(--orange);
+    margin-top: 0.5rem; padding: 0.4rem 0.6rem;
+    background: rgba(224,123,57,0.08);
+    border: 1px solid rgba(224,123,57,0.2);
+    border-radius: 4px;
+    display: none;
+  }
+
+  .marginal-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.45rem;
+    font-size: 0.72rem;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-weight: 500;
+    transition: background 0.2s, color 0.2s;
+  }
+  .marginal-badge.hidden { display: none; }
+
+  .oi-tier-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.75rem;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .oi-tier-row:last-child { border-bottom: none; }
+  .oi-tier-label { color: var(--muted); }
+  .oi-tier-math  { color: var(--muted); font-size: 0.68rem; margin: 0 0.5rem; }
+  .oi-tier-tax   { color: var(--orange); font-weight: 500; }
+  .oi-tiers-container {
+    background: rgba(224,123,57,0.05);
+    border: 1px solid rgba(224,123,57,0.15);
+    border-radius: 4px;
+    margin: 0.25rem 0 0.5rem;
+    overflow: hidden;
+  }
+  .oi-tiers-empty {
+    font-size: 0.75rem; color: var(--muted);
+    padding: 0.4rem 0.6rem; font-style: italic;
+  }
+
+  footer {
+    text-align: center; font-size: 0.65rem;
+    color: var(--muted); margin-top: 2rem; line-height: 1.7;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header-badge">2026 · MFJ · No State Income Tax · Confirmed Brackets</div>
+  <h1>Investment Income Tax Explorer</h1>
+  <p class="subtitle">QUALIFIED DIVIDENDS · LONG-TERM CAPITAL GAINS · ORDINARY INCOME</p>
+
+  <!-- Sliders -->
+  <div class="panel">
+    <div class="panel-title">Income Inputs</div>
+
+    <div class="slider-group">
+      <div class="slider-label-row">
+        <span class="slider-label">
+          <span style="color:var(--orange); font-weight:500;">Ordinary Income</span>
+          <span class="slider-value" id="oiDisplay" style="margin-left:0.75rem;">$0</span>
+        </span>
+        <span style="font-size:0.68rem; color:var(--muted);">taxed at 10%–37%</span>
+      </div>
+      <div class="slider-sources">Wages · Pension/Annuity · RMDs · Taxable Social Security · Interest · Non-Qualified Dividends · Short-Term Gains</div>
+      <input type="range" class="oi-slider" id="oiSlider" min="0" max="300000" step="1000" value="0">
+      <div id="oiMarginalBadge" class="marginal-badge hidden"></div>
+    </div>
+
+    <div class="slider-group">
+      <div class="slider-label-row">
+        <span class="slider-label">
+          <span style="color:var(--green); font-weight:500;">Qualified Dividends</span>
+          <span class="slider-value" id="divDisplay" style="margin-left:0.75rem;">$60,000</span>
+        </span>
+        <span style="font-size:0.68rem; color:var(--muted);">taxed at 0% / 15% / 20%</span>
+      </div>
+      <div class="slider-sources">Recurring income from stocks &amp; funds held &gt;60 days · 1099-DIV Box 1b · Same rate schedule as LTCG</div>
+      <input type="range" class="div-slider" id="divSlider" min="0" max="300000" step="1000" value="60000">
+    </div>
+
+    <div class="slider-group">
+      <div class="slider-label-row">
+        <span class="slider-label">
+          <span style="color:var(--yellow); font-weight:500;">Long-Term Capital Gains</span>
+          <span class="slider-value" id="cgDisplay" style="margin-left:0.75rem;">$0</span>
+        </span>
+        <span style="font-size:0.68rem; color:var(--muted);">taxed at 0% / 15% / 20%</span>
+      </div>
+      <div class="slider-sources">Your decision variable — realized when you sell assets held &gt;1 year · Schedule D · Use this to find your tax-free harvest limit</div>
+      <input type="range" class="cg-slider" id="cgSlider" min="-3000" max="300000" step="1000" value="0">
+    </div>
+  </div>
+
+  <!-- Stack viz -->
+  <div class="panel">
+    <div class="panel-title">Tax Bracket Stack — Taxable Income</div>
+    <div class="stack-label">Ordinary income fills the bracket first; QD &amp; LTCG stack on top. After $32,200 standard deduction.</div>
+    <div class="bracket-track" id="bracketTrack"></div>
+    <div id="oiNote" class="oi-note"></div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.6rem; flex-wrap:wrap; gap:0.5rem;">
+      <div style="display:flex; gap:1.25rem; font-size:0.7rem; flex-wrap:wrap;">
+        <span><span class="dot" style="background:var(--orange)"></span>Ordinary (10–37%)</span>
+        <span><span class="dot" style="background:var(--green)"></span>QD/LTCG at 0%</span>
+        <span><span class="dot" style="background:var(--yellow)"></span>QD/LTCG at 15%</span>
+        <span><span class="dot" style="background:var(--red)"></span>QD/LTCG at 20%</span>
+        <span><span class="dot" style="background:var(--border)"></span>Unused 0% space</span>
+      </div>
+      <div id="headroomBadge" style="font-size:0.7rem; color:var(--green); background:rgba(63,185,80,0.1); border:1px solid rgba(63,185,80,0.25); padding:2px 8px; border-radius:4px; white-space:nowrap;"></div>
+    </div>
+  </div>
+
+  <!-- Metrics -->
+  <div class="metrics-grid">
+    <div class="metric-card">
+      <div class="metric-label">Ordinary Tax</div>
+      <div class="metric-value color-orange" id="mOrdinary">$0</div>
+      <div class="metric-sub">on wages/RMDs/interest</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Invest. at 0%</div>
+      <div class="metric-value color-green" id="mTaxFree">$60,000</div>
+      <div class="metric-sub">tax-free investment income</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Invest. at 15%</div>
+      <div class="metric-value color-yellow" id="mFifteen">$0</div>
+      <div class="metric-sub">above 0% threshold</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Invest. at 20%</div>
+      <div class="metric-value color-red" id="mTwenty">$0</div>
+      <div class="metric-sub">above $613,700</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">NIIT (3.8%)</div>
+      <div class="metric-value color-purple" id="mNiit">$0</div>
+      <div class="metric-sub">net invest. income &gt;$250k</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Total Tax</div>
+      <div class="metric-value color-accent" id="mTotal">$0</div>
+      <div class="metric-sub" id="mEffRate">0.00% effective rate</div>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="panel">
+    <div class="panel-title">Total Tax Owed vs. Capital Gains (at current dividend &amp; ordinary income levels)</div>
+    <div class="chart-area">
+      <canvas id="taxChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Breakdown -->
+  <div class="panel">
+    <div class="panel-title">Tax Breakdown</div>
+    <div class="breakdown-row">
+      <span class="breakdown-label"><span class="dot" style="background:var(--accent)"></span>Standard Deduction (2026 est.)</span>
+      <span class="breakdown-value color-accent">−$30,000</span>
+    </div>
+    <div class="breakdown-row">
+      <span class="breakdown-label">Total Gross Income</span>
+      <span class="breakdown-value" id="bGross">$60,000</span>
+    </div>
+    <div class="breakdown-row">
+      <span class="breakdown-label">Taxable Ordinary Income</span>
+      <span class="breakdown-value color-orange" id="bTaxableOI">$0</span>
+    </div>
+    <div id="bOITiers" class="oi-tiers-container" style="display:none;"></div>
+    <div class="breakdown-row">
+      <span class="breakdown-label">Ordinary Income Tax</span>
+      <span class="breakdown-value color-orange" id="bOrdinaryTax">$0</span>
+    </div>
+    <div class="breakdown-row">
+      <span class="breakdown-label">0% Invest. Headroom remaining</span>
+      <span class="breakdown-value" id="bHeadroom">$99,550</span>
+    </div>
+    <div class="breakdown-row">
+      <span class="breakdown-label">Investment Income at 0%</span>
+      <span class="breakdown-value color-green" id="bAt0">$60,000</span>
+    </div>
+    <div class="breakdown-row">
+      <span class="breakdown-label">Investment Income at 15%</span>
+      <span class="breakdown-value color-yellow" id="bAt15">$0</span>
+    </div>
+    <div class="breakdown-row">
+      <span class="breakdown-label">Investment Income at 20%</span>
+      <span class="breakdown-value color-red" id="bAt20">$0</span>
+    </div>
+    <div class="breakdown-row">
+      <span class="breakdown-label">NIIT (3.8% on NII &gt; $250k MAGI)</span>
+      <span class="breakdown-value color-purple" id="bNiit">$0</span>
+    </div>
+    <div class="breakdown-row" style="border-top: 1px solid var(--accent); margin-top:0.25rem; padding-top:0.75rem;">
+      <span style="color:var(--text); font-weight:500;">Total Federal Tax</span>
+      <span class="breakdown-value color-accent" style="font-size:1.1rem" id="bTotal">$0</span>
+    </div>
+  </div>
+
+  <div class="callout" id="callout"></div>
+
+  <footer>
+    <strong style="color:#8b949e">Confirmed 2026 MFJ ordinary income brackets:</strong> 10% to $24,800 &middot; 12% to $100,800 &middot; 22% to $211,400 &middot; 24% to $403,550 &middot; 32% to $512,450 &middot; 35% to $768,700 &middot; 37% above.<br>
+    <strong style="color:#8b949e">Confirmed 2026 LTCG rates:</strong> 0% to $98,900 &middot; 15% to $613,700 &middot; 20% above &middot; Standard deduction $32,200 &middot; NIIT MAGI threshold $250,000 (not inflation-adjusted).<br>
+    For illustrative purposes only &mdash; consult a tax advisor. Does not include AMT, SE tax, or state taxes.
+  </footer>
+</div>
+
+<script>
+// ── 2026 MFJ parameters ──────────────────────────────────────────
+const STD_DED        = 32200;   // 2026 MFJ standard deduction (confirmed)
+const THRESH_0       = 98900;   // top of 0% LTCG bracket (confirmed)
+const THRESH_15      = 613700;  // top of 15% LTCG bracket (confirmed)
+const NIIT_THRESHOLD = 250000;  // MAGI threshold for NIIT — not inflation-adjusted
+
+// 2026 MFJ ordinary income brackets — confirmed
+const OI_BRACKETS = [
+  { ceil: 24800,    rate: 0.10 },
+  { ceil: 100800,   rate: 0.12 },
+  { ceil: 211400,   rate: 0.22 },
+  { ceil: 403550,   rate: 0.24 },
+  { ceil: 512450,   rate: 0.32 },
+  { ceil: 768700,   rate: 0.35 },
+  { ceil: Infinity, rate: 0.37 },
+];
+
+function getMarginalRate(taxableOI) {
+  if (taxableOI <= 0) return null;
+  let prev = 0;
+  for (const b of OI_BRACKETS) {
+    if (taxableOI <= b.ceil) return b.rate;
+    prev = b.ceil;
+  }
+  return OI_BRACKETS[OI_BRACKETS.length - 1].rate;
+}
+
+function getOIBracketTiers(taxableOI) {
+  const tiers = [];
+  let prev = 0;
+  for (const b of OI_BRACKETS) {
+    if (taxableOI <= prev) break;
+    const amount = Math.min(taxableOI, b.ceil) - prev;
+    if (amount > 0) tiers.push({ floor: prev, amount, rate: b.rate, tax: amount * b.rate });
+    prev = b.ceil;
+  }
+  return tiers;
+}
+
+function calcOrdinaryTax(taxableOI) {
+  let tax = 0, prev = 0;
+  for (const b of OI_BRACKETS) {
+    if (taxableOI <= prev) break;
+    const slice = Math.min(taxableOI, b.ceil) - prev;
+    tax += slice * b.rate;
+    prev = b.ceil;
+  }
+  return tax;
+}
+
+function fmt(n) {
+  if (n < 0) return '−$' + Math.round(-n).toLocaleString();
+  return '$' + Math.round(n).toLocaleString();
+}
+
+function calcTax(oi, divs, cg) {
+  const gross = oi + divs + cg;
+  // Standard deduction applies to total income
+  const totalTaxable = Math.max(0, gross - STD_DED);
+
+  // Per IRS Qualified Dividends & Capital Gain Tax Worksheet:
+  // Investment income (divs + CG) is capped at total taxable income,
+  // and ordinary income = taxable income - investment income.
+  // This means the standard deduction falls against ordinary income first.
+  // A net capital loss reduces gross income but can't make investment income negative
+  const investTaxable = Math.max(0, Math.min(divs + cg, totalTaxable));
+  const taxableOI     = totalTaxable - investTaxable;       // deduction absorbed by OI
+  const ordTax        = calcOrdinaryTax(taxableOI);
+
+  // How much of the 0% LTCG bracket remains after ordinary income fills it
+  const zeroHeadroom  = Math.max(0, THRESH_0 - taxableOI);
+
+  const inv_at0  = Math.min(investTaxable, zeroHeadroom);
+  const inv_at15 = Math.max(0, Math.min(investTaxable, THRESH_15 - taxableOI) - zeroHeadroom);
+  const inv_at20 = Math.max(0, investTaxable - Math.max(0, THRESH_15 - taxableOI));
+
+  const tax15 = inv_at15 * 0.15;
+  const tax20 = inv_at20 * 0.20;
+
+  // NIIT: on net investment income when MAGI > $250k (NII can't be negative)
+  const nii      = Math.max(0, divs + cg);
+  const niitBase = Math.max(0, Math.min(nii, gross - NIIT_THRESHOLD));
+  const niitTax  = Math.max(0, niitBase) * 0.038;
+
+  const total = ordTax + tax15 + tax20 + niitTax;
+
+  return {
+    gross, totalTaxable, taxableOI, ordTax,
+    zeroHeadroom, investTaxable,
+    inv_at0, inv_at15, inv_at20,
+    tax15, tax20, niitBase, niitTax, total
+  };
+}
+
+// ── Chart ────────────────────────────────────────────────────────────────────
+const canvas = document.getElementById('taxChart');
+const ctx    = canvas.getContext('2d');
+const POINTS = 61;
+
+function buildChartData(oi, divs) {
+  const minCG = -3000, maxCG = 300000;
+  const labels = [], total = [], ordArr = [], inv15 = [], inv20 = [], niitArr = [];
+  for (let i = 0; i < POINTS; i++) {
+    const cg = minCG + ((maxCG - minCG) / (POINTS - 1)) * i;
+    const r  = calcTax(oi, divs, cg);
+    labels.push(cg);
+    total.push(r.total);
+    ordArr.push(r.ordTax);
+    inv15.push(r.tax15);
+    inv20.push(r.tax20);
+    niitArr.push(r.niitTax);
+  }
+  return { labels, total, ordArr, inv15, inv20, niitArr };
+}
+
+function drawChart(oi, divs, currentCG) {
+  const { labels, total, ordArr } = buildChartData(oi, divs);
+
+  const W = canvas.width  = canvas.offsetWidth;
+  const H = canvas.height = canvas.offsetHeight;
+  const pad = { top: 20, right: 20, bottom: 44, left: 68 };
+  const cw = W - pad.left - pad.right;
+  const ch = H - pad.top  - pad.bottom;
+
+  ctx.clearRect(0, 0, W, H);
+
+  const maxY = Math.max(...total, 10000);
+  const minX = -3000, maxX = 300000;
+
+  const xp = v => pad.left + ((v - minX) / (maxX - minX)) * cw;
+  const yp = v => pad.top  + ch - (v / maxY) * ch;
+
+  // Grid
+  ctx.strokeStyle = 'rgba(48,54,61,0.8)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.top + (i / 4) * ch;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + cw, y); ctx.stroke();
+    const val = maxY * (1 - i / 4);
+    ctx.fillStyle = '#8b949e';
+    ctx.font = '10px DM Mono, monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText('$' + (val >= 1000 ? Math.round(val/1000) + 'k' : Math.round(val)), pad.left - 8, y + 4);
+  }
+  // X-axis ticks: $0, $50k, $100k ... $300k (skip the −$3k edge)
+  const xTicks = [0, 50000, 100000, 150000, 200000, 250000, 300000];
+  for (const v of xTicks) {
+    const x = xp(v);
+    ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, pad.top + ch);
+    ctx.strokeStyle = 'rgba(48,54,61,0.8)'; ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = '#8b949e';
+    ctx.textAlign = 'center';
+    ctx.font = '10px DM Mono, monospace';
+    ctx.fillText(v === 0 ? '$0' : '$' + Math.round(v/1000) + 'k', x, pad.top + ch + 18);
+  }
+  // $0 reference line (loss/gain boundary)
+  const x0 = xp(0);
+  ctx.beginPath(); ctx.moveTo(x0, pad.top); ctx.lineTo(x0, pad.top + ch);
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1;
+  ctx.setLineDash([2, 4]); ctx.stroke(); ctx.setLineDash([]);
+
+  ctx.fillStyle = '#8b949e';
+  ctx.textAlign = 'center';
+  ctx.font = '10px DM Mono, monospace';
+  ctx.fillText('Capital Gains / (Loss)', pad.left + cw / 2, H - 4);
+
+  function drawArea(dataArr, color) {
+    ctx.beginPath();
+    ctx.moveTo(xp(labels[0]), yp(0));
+    dataArr.forEach((v, i) => ctx.lineTo(xp(labels[i]), yp(v)));
+    ctx.lineTo(xp(labels[labels.length-1]), yp(0));
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+
+  drawArea(total,   'rgba(210,153,34,0.12)');
+  drawArea(ordArr,  'rgba(224,123,57,0.15)');
+
+  // Ordinary income flat line (constant as CG changes)
+  if (oi > 0) {
+    ctx.beginPath();
+    labels.forEach((_, i) => {
+      const x = xp(labels[i]), y = yp(ordArr[i]);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = 'rgba(224,123,57,0.6)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([3, 3]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Total tax line
+  ctx.beginPath();
+  total.forEach((v, i) => {
+    const x = xp(labels[i]), y = yp(v);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = '#58a6ff';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+
+  // Current CG vertical
+  const cx = xp(currentCG);
+  ctx.beginPath(); ctx.moveTo(cx, pad.top); ctx.lineTo(cx, pad.top + ch);
+  ctx.strokeStyle = 'rgba(88,166,255,0.5)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 4]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Dot on current
+  const cIdx = Math.round(((currentCG - (-3000)) / (maxX - (-3000))) * (POINTS - 1));
+  const cTax = total[Math.min(Math.max(cIdx, 0), total.length - 1)];
+  ctx.beginPath();
+  ctx.arc(cx, yp(cTax), 5, 0, Math.PI * 2);
+  ctx.fillStyle = '#58a6ff';
+  ctx.fill();
+  ctx.strokeStyle = '#0d1117';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+// ── Bracket viz ──────────────────────────────────────────────────────────────
+function drawBracket(oi, divs, cg) {
+  const track = document.getElementById('bracketTrack');
+  const r = calcTax(oi, divs, cg);
+
+  // Scale is the full 0% zone ceiling (taxable), so the bar always shows
+  // the 0% bracket as its natural anchor point.
+  const scale = Math.max(r.totalTaxable * 1.18, THRESH_0 * 1.05, 30000);
+
+  const pct = v => (Math.min(Math.max(v, 0), scale) / scale * 100).toFixed(2);
+
+  const oiW    = pct(r.taxableOI);
+  const inv0W  = pct(r.inv_at0);
+  const inv15W = pct(r.inv_at15);
+  const inv20W = pct(r.inv_at20);
+  // Unused space = remaining 0% headroom not yet filled
+  const unusedW = pct(Math.max(0, r.zeroHeadroom - r.inv_at0));
+
+  const left_inv0   = parseFloat(oiW);
+  const left_unused = left_inv0 + parseFloat(inv0W);
+  const left_15     = left_unused + parseFloat(unusedW);
+  const left_20     = left_15 + parseFloat(inv15W);
+
+  track.innerHTML = `
+    <div class="bracket-segment seg-oi" style="left:0; width:${oiW}%;">
+      ${parseFloat(oiW) > 7 ? 'Ordinary' : ''}
+    </div>
+    <div class="bracket-segment seg-zero" style="left:${left_inv0}%; width:${inv0W}%;">
+      ${parseFloat(inv0W) > 6 ? '0%' : ''}
+    </div>
+    <div class="bracket-segment" style="left:${left_unused}%; width:${unusedW}%; background:rgba(255,255,255,0.04); border-right:1px dashed rgba(255,255,255,0.1);">
+    </div>
+    <div class="bracket-segment seg-fifteen" style="left:${left_15}%; width:${inv15W}%;">
+      ${parseFloat(inv15W) > 6 ? '15%' : ''}
+    </div>
+    <div class="bracket-segment seg-twenty" style="left:${left_20}%; width:${inv20W}%;">
+      ${parseFloat(inv20W) > 6 ? '20%' : ''}
+    </div>
+  `;
+
+  // Headroom badge
+  const badge = document.getElementById('headroomBadge');
+  const headroom = Math.max(0, THRESH_0 + STD_DED - oi - divs - cg);
+  if (headroom > 0) {
+    badge.textContent = fmt(headroom) + ' 0% headroom left';
+    badge.style.color = headroom > 20000 ? 'var(--green)' : 'var(--yellow)';
+    badge.style.background = headroom > 20000 ? 'rgba(63,185,80,0.1)' : 'rgba(210,153,34,0.1)';
+    badge.style.border = headroom > 20000 ? '1px solid rgba(63,185,80,0.25)' : '1px solid rgba(210,153,34,0.3)';
+  } else {
+    badge.textContent = '0% bracket full';
+    badge.style.color = 'var(--yellow)';
+    badge.style.background = 'rgba(210,153,34,0.1)';
+    badge.style.border = '1px solid rgba(210,153,34,0.3)';
+  }
+
+  // OI erosion note
+  const oiNote = document.getElementById('oiNote');
+  if (oi > 0 && r.zeroHeadroom < THRESH_0) {
+    const eroded = THRESH_0 - r.zeroHeadroom;
+    oiNote.style.display = 'block';
+    oiNote.textContent = `Ordinary income has consumed ${fmt(Math.min(eroded, THRESH_0))} of the 0% LTCG bracket. Only ${fmt(r.zeroHeadroom)} of the $${(THRESH_0/1000).toFixed(1)}k 0% zone remains for QD/LTCG.`;
+  } else {
+    oiNote.style.display = 'none';
+  }
+}
+
+// ── Main update ──────────────────────────────────────────────────────────────
+function update() {
+  const oi   = parseInt(document.getElementById('oiSlider').value);
+  const divs = parseInt(document.getElementById('divSlider').value);
+  const cg   = parseInt(document.getElementById('cgSlider').value);
+
+  document.getElementById('oiDisplay').textContent  = fmt(oi);
+  document.getElementById('divDisplay').textContent = fmt(divs);
+  document.getElementById('cgDisplay').textContent  = fmt(cg);
+
+  const r = calcTax(oi, divs, cg);
+  const effRate = r.gross > 0 ? (r.total / r.gross * 100) : 0;
+
+  // Metrics
+  document.getElementById('mOrdinary').textContent = fmt(r.ordTax);
+  document.getElementById('mTaxFree').textContent  = fmt(r.inv_at0);
+  document.getElementById('mFifteen').textContent  = fmt(r.inv_at15);
+  document.getElementById('mTwenty').textContent   = fmt(r.inv_at20);
+  document.getElementById('mNiit').textContent     = fmt(r.niitTax);
+  document.getElementById('mTotal').textContent    = fmt(r.total);
+  document.getElementById('mEffRate').textContent  = effRate.toFixed(2) + '% effective rate';
+
+  // Marginal rate badge (Option B)
+  const marginalRate = getMarginalRate(r.taxableOI);
+  const badge = document.getElementById('oiMarginalBadge');
+  if (marginalRate !== null) {
+    const pct = Math.round(marginalRate * 100);
+    const colors = {
+      10: { bg: 'rgba(63,185,80,0.12)',  border: 'rgba(63,185,80,0.3)',  text: '#3fb950' },
+      12: { bg: 'rgba(63,185,80,0.08)',  border: 'rgba(63,185,80,0.2)',  text: '#7cc97e' },
+      22: { bg: 'rgba(210,153,34,0.12)', border: 'rgba(210,153,34,0.3)', text: '#d29922' },
+      24: { bg: 'rgba(224,123,57,0.14)', border: 'rgba(224,123,57,0.35)',text: '#e07b39' },
+      32: { bg: 'rgba(248,81,73,0.12)',  border: 'rgba(248,81,73,0.3)',  text: '#f85149' },
+      35: { bg: 'rgba(248,81,73,0.15)',  border: 'rgba(248,81,73,0.35)', text: '#f85149' },
+      37: { bg: 'rgba(248,81,73,0.18)',  border: 'rgba(248,81,73,0.4)',  text: '#f85149' },
+    };
+    const c = colors[pct] || colors[37];
+    badge.className = 'marginal-badge';
+    badge.style.background = c.bg;
+    badge.style.border = '1px solid ' + c.border;
+    badge.style.color = c.text;
+    badge.innerHTML = `<span style="font-size:0.65rem; opacity:0.8;">Marginal ordinary rate</span><span style="font-size:0.88rem;">${pct}%</span>`;
+  } else {
+    badge.className = 'marginal-badge hidden';
+  }
+
+  // Breakdown
+  document.getElementById('bGross').textContent      = fmt(r.gross);
+  document.getElementById('bTaxableOI').textContent  = fmt(r.taxableOI);
+  document.getElementById('bOrdinaryTax').textContent= fmt(r.ordTax);
+  document.getElementById('bHeadroom').textContent   = fmt(r.zeroHeadroom);
+
+  // OI tier breakdown (Option C)
+  const tiersContainer = document.getElementById('bOITiers');
+  const tiers = getOIBracketTiers(r.taxableOI);
+  if (tiers.length > 0) {
+    tiersContainer.style.display = 'block';
+    tiersContainer.innerHTML = tiers.map(t => {
+      const pct = Math.round(t.rate * 100);
+      return `<div class="oi-tier-row">
+        <span class="oi-tier-label">${fmt(t.amount)} @ ${pct}%</span>
+        <span class="oi-tier-math">→</span>
+        <span class="oi-tier-tax">${fmt(t.tax)}</span>
+      </div>`;
+    }).join('');
+  } else {
+    tiersContainer.style.display = 'none';
+  }
+  document.getElementById('bAt0').textContent        = fmt(r.inv_at0);
+  document.getElementById('bAt15').textContent       = fmt(r.inv_at15);
+  document.getElementById('bAt20').textContent       = fmt(r.inv_at20);
+  document.getElementById('bNiit').textContent       = fmt(r.niitTax);
+  document.getElementById('bTotal').textContent      = fmt(r.total);
+
+  // Callout
+  const callout = document.getElementById('callout');
+  const investIncome = divs + cg;
+  const grossHeadroom = Math.max(0, THRESH_0 + STD_DED - oi - investIncome);
+
+  if (oi > 0 && r.zeroHeadroom === 0) {
+    callout.innerHTML = `Your ordinary income of <strong>${fmt(oi)}</strong> has completely filled the 0% LTCG bracket. <strong style="color:var(--orange)">All investment income is now taxed at 15% or higher</strong>. Ordinary income tax: <strong style="color:var(--orange)">${fmt(r.ordTax)}</strong>. Total federal tax: <strong>${fmt(r.total)}</strong>.`;
+  } else if (r.total === 0 || (r.ordTax === 0 && r.inv_at15 === 0)) {
+    callout.innerHTML = `All investment income is <strong style="color:var(--green)">tax-free</strong>. You have <strong>${fmt(grossHeadroom)}</strong> of remaining headroom before investment income starts being taxed.${oi > 0 ? ` Ordinary income tax: <strong style="color:var(--orange)">${fmt(r.ordTax)}</strong>.` : ''}`;
+  } else if (r.inv_at15 > 0 && r.inv_at20 === 0) {
+    callout.innerHTML = `<strong>${fmt(r.inv_at15)}</strong> of investment income is being taxed at <strong style="color:var(--yellow)">15%</strong>${oi > 0 ? `, partly because ordinary income of <strong>${fmt(oi)}</strong> consumed ${fmt(Math.min(oi, THRESH_0))} of the 0% bracket` : `, pushed over the threshold by capital gains`}. Ordinary tax: <strong style="color:var(--orange)">${fmt(r.ordTax)}</strong>. Total federal tax: <strong>${fmt(r.total)}</strong>.`;
+  } else {
+    callout.innerHTML = `Income reaches the <strong style="color:var(--red)">20% LTCG bracket</strong>. ${r.niitBase > 0 ? `<strong>${fmt(r.niitBase)}</strong> is also subject to the 3.8% NIIT, making the combined top rate <strong style="color:var(--red)">23.8%</strong>. ` : ''}Total federal tax: <strong>${fmt(r.total)}</strong>.`;
+  }
+
+  drawBracket(oi, divs, cg);
+  drawChart(oi, divs, cg);
+}
+
+document.getElementById('oiSlider').addEventListener('input', update);
+document.getElementById('divSlider').addEventListener('input', update);
+document.getElementById('cgSlider').addEventListener('input', update);
+window.addEventListener('resize', () => update());
+
+update();
+</script>
+</body>
+</html>
