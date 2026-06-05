@@ -138,22 +138,12 @@
         cursor: pointer;
       }
 
-      input[type="range"].div-slider::-webkit-slider-thumb {
+      input[type="range"].invest-slider::-webkit-slider-thumb {
         -webkit-appearance: none;
         width: 18px;
         height: 18px;
         border-radius: 50%;
         background: var(--green);
-        border: 2px solid var(--bg);
-        cursor: pointer;
-        transition: transform 0.1s;
-      }
-      input[type="range"].cg-slider::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        width: 18px;
-        height: 18px;
-        border-radius: 50%;
-        background: var(--yellow);
         border: 2px solid var(--bg);
         cursor: pointer;
         transition: transform 0.1s;
@@ -448,11 +438,11 @@
           <div class="slider-label-row">
             <span class="slider-label">
               <span style="color: var(--green); font-weight: 500"
-                >Qualified Dividends</span
+                >Investment Income</span
               >
               <span
                 class="slider-value"
-                id="divDisplay"
+                id="investDisplay"
                 style="margin-left: 0.75rem"
                 >$60,000</span
               >
@@ -462,51 +452,20 @@
             >
           </div>
           <div class="slider-sources">
-            Recurring income from stocks &amp; funds held &gt;60 days · 1099-DIV
-            Box 1b · Same rate schedule as LTCG
+            Qualified Dividends (1099-DIV Box 1b) + Long-Term Capital Gains
+            (Schedule D, assets held &gt;1 year) · Both taxed at preferential
+            LTCG/QD rates · Negative values represent a net capital loss (up to
+            $3,000 deductible against ordinary income)
           </div>
           <input
             type="range"
-            class="div-slider"
-            id="divSlider"
-            min="0"
-            max="300000"
-            step="100"
+            class="invest-slider"
+            id="investSlider"
+            min="-3000"
+            max="600000"
+            step="1000"
             value="60000"
           />
-        </div>
-
-        <div class="slider-group">
-          <div class="slider-label-row">
-            <span class="slider-label">
-              <span style="color: var(--yellow); font-weight: 500"
-                >Long-Term Capital Gains</span
-              >
-              <span
-                class="slider-value"
-                id="cgDisplay"
-                style="margin-left: 0.75rem"
-                >$0</span
-              >
-            </span>
-            <span style="font-size: 0.68rem; color: var(--muted)"
-              >taxed at 0% / 15% / 20%</span
-            >
-          </div>
-          <div class="slider-sources">
-            Your decision variable — realized when you sell assets held &gt;1
-            year · Schedule D · Use this to find your tax-free harvest limit
-          </div>
-          <input
-            type="range"
-            class="cg-slider"
-            id="cgSlider"
-            min="-3000"
-            max="300000"
-            step="100"
-            value="0"
-          />
-        </div>
       </div>
 
       <!-- Stack viz -->
@@ -609,8 +568,7 @@
       <!-- Chart -->
       <div class="panel">
         <div class="panel-title">
-          Total Tax Owed vs. Capital Gains (at current dividend &amp; ordinary
-          income levels)
+          Total Tax Owed vs. Investment Income (at current ordinary income level)
         </div>
         <div class="chart-area">
           <canvas id="taxChart"></canvas>
@@ -765,17 +723,17 @@
         return "$" + Math.round(n).toLocaleString();
       }
 
-      function calcTax(oi, divs, cg) {
-        const gross = oi + divs + cg;
+      function calcTax(oi, invest) {
+        const gross = oi + invest;
         // Standard deduction applies to total income
         const totalTaxable = Math.max(0, gross - STD_DED);
 
         // Per IRS Qualified Dividends & Capital Gain Tax Worksheet:
-        // Investment income (divs + CG) is capped at total taxable income,
+        // Investment income (QD + LTCG) is capped at total taxable income,
         // and ordinary income = taxable income - investment income.
         // This means the standard deduction falls against ordinary income first.
-        // A net capital loss reduces gross income but can't make investment income negative
-        const investTaxable = Math.max(0, Math.min(divs + cg, totalTaxable));
+        // A net capital loss reduces gross income but can't make investment income negative.
+        const investTaxable = Math.max(0, Math.min(invest, totalTaxable));
         const taxableOI = totalTaxable - investTaxable; // deduction absorbed by OI
         const ordTax = calcOrdinaryTax(taxableOI);
 
@@ -796,7 +754,7 @@
         const tax20 = inv_at20 * 0.2;
 
         // NIIT: on net investment income when MAGI > $250k (NII can't be negative)
-        const nii = Math.max(0, divs + cg);
+        const nii = Math.max(0, invest);
         const niitBase = Math.max(0, Math.min(nii, gross - NIIT_THRESHOLD));
         const niitTax = niitBase * 0.038;
 
@@ -825,9 +783,9 @@
       const ctx = canvas.getContext("2d");
       const POINTS = 61;
 
-      function buildChartData(oi, divs) {
-        const minCG = -3000,
-          maxCG = 300000;
+      function buildChartData(oi) {
+        const minI = -3000,
+          maxI = 600000;
         const labels = [],
           total = [],
           ordArr = [],
@@ -835,9 +793,9 @@
           inv20 = [],
           niitArr = [];
         for (let i = 0; i < POINTS; i++) {
-          const cg = minCG + ((maxCG - minCG) / (POINTS - 1)) * i;
-          const r = calcTax(oi, divs, cg);
-          labels.push(cg);
+          const invest = minI + ((maxI - minI) / (POINTS - 1)) * i;
+          const r = calcTax(oi, invest);
+          labels.push(invest);
           total.push(r.total);
           ordArr.push(r.ordTax);
           inv15.push(r.tax15);
@@ -847,8 +805,8 @@
         return { labels, total, ordArr, inv15, inv20, niitArr };
       }
 
-      function drawChart(oi, divs, currentCG) {
-        const { labels, total, ordArr } = buildChartData(oi, divs);
+      function drawChart(oi, currentInvest) {
+        const { labels, total, ordArr } = buildChartData(oi);
 
         const W = (canvas.width = canvas.offsetWidth);
         const H = (canvas.height = canvas.offsetHeight);
@@ -860,7 +818,7 @@
 
         const maxY = Math.max(...total, 10000);
         const minX = -3000,
-          maxX = 300000;
+          maxX = 600000;
 
         const xp = (v) => pad.left + ((v - minX) / (maxX - minX)) * cw;
         const yp = (v) => pad.top + ch - (v / maxY) * ch;
@@ -885,8 +843,8 @@
             y + 4,
           );
         }
-        // X-axis ticks: $0, $50k, $100k ... $300k (skip the −$3k edge)
-        const xTicks = [0, 50000, 100000, 150000, 200000, 250000, 300000];
+        // X-axis ticks: $0, $100k … $600k (skip the −$3k edge)
+        const xTicks = [0, 100000, 200000, 300000, 400000, 500000, 600000];
         for (const v of xTicks) {
           const x = xp(v);
           ctx.beginPath();
@@ -918,7 +876,7 @@
         ctx.fillStyle = "#8b949e";
         ctx.textAlign = "center";
         ctx.font = "10px DM Mono, monospace";
-        ctx.fillText("Capital Gains / (Loss)", pad.left + cw / 2, H - 4);
+        ctx.fillText("Investment Income (QD + LTCG)", pad.left + cw / 2, H - 4);
 
         function drawArea(dataArr, color) {
           ctx.beginPath();
@@ -959,8 +917,8 @@
         ctx.lineWidth = 2.5;
         ctx.stroke();
 
-        // Current CG vertical
-        const cx = xp(currentCG);
+        // Current invest vertical
+        const cx = xp(currentInvest);
         ctx.beginPath();
         ctx.moveTo(cx, pad.top);
         ctx.lineTo(cx, pad.top + ch);
@@ -972,7 +930,7 @@
 
         // Dot on current
         const cIdx = Math.round(
-          ((currentCG - -3000) / (maxX - -3000)) * (POINTS - 1),
+          ((currentInvest - -3000) / (maxX - -3000)) * (POINTS - 1),
         );
         const cTax = total[Math.min(Math.max(cIdx, 0), total.length - 1)];
         ctx.beginPath();
@@ -985,9 +943,9 @@
       }
 
       // ── Bracket viz ──────────────────────────────────────────────────────────────
-      function drawBracket(oi, divs, cg) {
+      function drawBracket(oi, invest) {
         const track = document.getElementById("bracketTrack");
-        const r = calcTax(oi, divs, cg);
+        const r = calcTax(oi, invest);
 
         // Scale is the full 0% zone ceiling (taxable), so the bar always shows
         // the 0% bracket as its natural anchor point.
@@ -1059,14 +1017,12 @@
       // ── Main update ──────────────────────────────────────────────────────────────
       function update() {
         const oi = parseInt(document.getElementById("oiSlider").value);
-        const divs = parseInt(document.getElementById("divSlider").value);
-        const cg = parseInt(document.getElementById("cgSlider").value);
+        const invest = parseInt(document.getElementById("investSlider").value);
 
         document.getElementById("oiDisplay").textContent = fmt(oi);
-        document.getElementById("divDisplay").textContent = fmt(divs);
-        document.getElementById("cgDisplay").textContent = fmt(cg);
+        document.getElementById("investDisplay").textContent = fmt(invest);
 
-        const r = calcTax(oi, divs, cg);
+        const r = calcTax(oi, invest);
         const effRate = r.gross > 0 ? (r.total / r.gross) * 100 : 0;
 
         // Metrics
@@ -1164,29 +1120,24 @@
 
         // Callout
         const callout = document.getElementById("callout");
-        const investIncome = divs + cg;
-        const grossHeadroom = Math.max(
-          0,
-          THRESH_0 + STD_DED - oi - investIncome,
-        );
+        const grossHeadroom = Math.max(0, THRESH_0 + STD_DED - oi - invest);
 
         if (oi > 0 && r.zeroHeadroom === 0) {
           callout.innerHTML = `Your ordinary income of <strong>${fmt(oi)}</strong> has completely filled the 0% LTCG bracket. <strong style="color:var(--orange)">All investment income is now taxed at 15% or higher</strong>. Ordinary income tax: <strong style="color:var(--orange)">${fmt(r.ordTax)}</strong>. Total federal tax: <strong>${fmt(r.total)}</strong>.`;
         } else if (r.total === 0 || (r.ordTax === 0 && r.inv_at15 === 0)) {
           callout.innerHTML = `All investment income is <strong style="color:var(--green)">tax-free</strong>. You have <strong>${fmt(grossHeadroom)}</strong> of remaining headroom before investment income starts being taxed.${oi > 0 ? ` Ordinary income tax: <strong style="color:var(--orange)">${fmt(r.ordTax)}</strong>.` : ""}`;
         } else if (r.inv_at15 > 0 && r.inv_at20 === 0) {
-          callout.innerHTML = `<strong>${fmt(r.inv_at15)}</strong> of investment income is being taxed at <strong style="color:var(--yellow)">15%</strong>${oi > 0 ? `, partly because ordinary income of <strong>${fmt(oi)}</strong> consumed ${fmt(Math.min(oi, THRESH_0))} of the 0% bracket` : `, pushed over the threshold by capital gains`}. Ordinary tax: <strong style="color:var(--orange)">${fmt(r.ordTax)}</strong>. Total federal tax: <strong>${fmt(r.total)}</strong>.`;
+          callout.innerHTML = `<strong>${fmt(r.inv_at15)}</strong> of investment income is being taxed at <strong style="color:var(--yellow)">15%</strong>${oi > 0 ? `, partly because ordinary income of <strong>${fmt(oi)}</strong> consumed ${fmt(Math.min(oi, THRESH_0))} of the 0% bracket` : `, pushed over the threshold`}. Ordinary tax: <strong style="color:var(--orange)">${fmt(r.ordTax)}</strong>. Total federal tax: <strong>${fmt(r.total)}</strong>.`;
         } else {
           callout.innerHTML = `Income reaches the <strong style="color:var(--red)">20% LTCG bracket</strong>. ${r.niitBase > 0 ? `<strong>${fmt(r.niitBase)}</strong> is also subject to the 3.8% NIIT, making the combined top rate <strong style="color:var(--red)">23.8%</strong>. ` : ""}Total federal tax: <strong>${fmt(r.total)}</strong>.`;
         }
 
-        drawBracket(oi, divs, cg);
-        drawChart(oi, divs, cg);
+        drawBracket(oi, invest);
+        drawChart(oi, invest);
       }
 
       document.getElementById("oiSlider").addEventListener("input", update);
-      document.getElementById("divSlider").addEventListener("input", update);
-      document.getElementById("cgSlider").addEventListener("input", update);
+      document.getElementById("investSlider").addEventListener("input", update);
       window.addEventListener("resize", () => update());
 
       update();
