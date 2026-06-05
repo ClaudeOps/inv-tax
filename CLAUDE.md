@@ -1,4 +1,6 @@
-# Tax Calculator — CLAUDE.md
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
@@ -9,6 +11,15 @@ tax brackets and helps identify the maximum tax-free capital gain harvest limit.
 
 **File:** `index.html` — all HTML, CSS, and JS in one file. No build step, no dependencies
 beyond a Google Fonts import. Open directly in a browser.
+
+## Development
+
+```bash
+open index.html          # open in default browser (macOS)
+python3 -m http.server   # optional local server if needed for font loading
+```
+
+There is no build, lint, or test toolchain. Edit `index.html` and reload the browser.
 
 ---
 
