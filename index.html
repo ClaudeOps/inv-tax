@@ -985,7 +985,7 @@
 
         // Headroom badge
         const badge = document.getElementById("headroomBadge");
-        const headroom = r.zeroHeadroom;
+        const headroom = Math.max(0, r.zeroHeadroom - r.inv_at0);
         if (headroom > 0) {
           badge.textContent = fmt(headroom) + " 0% headroom left";
           badge.style.color =
@@ -1092,7 +1092,7 @@
         document.getElementById("bGross").textContent = fmt(r.gross);
         document.getElementById("bTaxableOI").textContent = fmt(r.taxableOI);
         document.getElementById("bOrdinaryTax").textContent = fmt(r.ordTax);
-        document.getElementById("bHeadroom").textContent = fmt(r.zeroHeadroom);
+        document.getElementById("bHeadroom").textContent = fmt(Math.max(0, r.zeroHeadroom - r.inv_at0));
 
         // OI tier breakdown (Option C)
         const tiersContainer = document.getElementById("bOITiers");
