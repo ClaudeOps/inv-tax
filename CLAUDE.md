@@ -77,15 +77,14 @@ niitTax = niitBase * 0.038;
 
 ## UI Components
 
-### Three Sliders
+### Two Sliders
 
-| Slider                  | Color                      | Range        | Notes                                                        |
-| ----------------------- | -------------------------- | ------------ | ------------------------------------------------------------ |
-| Ordinary Income         | Orange `--orange: #e07b39` | $0 – $300k   | Wages, pension, RMDs, SS, interest, non-QD, short-term gains |
-| Qualified Dividends     | Green `--green: #3fb950`   | $0 – $300k   | Recurring portfolio income, 1099-DIV Box 1b                  |
-| Long-Term Capital Gains | Yellow `--yellow: #d29922` | −$3k – $300k | Decision variable; starts at $0                              |
+| Slider             | Color                      | Range          | Notes                                                         |
+| ------------------ | -------------------------- | -------------- | ------------------------------------------------------------- |
+| Ordinary Income    | Orange `--orange: #e07b39` | $0 – $300k     | Wages, pension, RMDs, SS, interest, non-QD, short-term gains  |
+| Investment Income  | Green `--green: #3fb950`   | −$3k – $600k   | QD + LTCG combined; negative = net capital loss; starts $60k  |
 
-Each slider has a `.slider-sources` description line and a color-coded rate label on the right.
+Both sliders use `step="100"`. Each has a `.slider-sources` description line and a color-coded rate label on the right.
 The OI slider also renders a `#oiMarginalBadge` pill below it showing the marginal ordinary rate.
 
 ### Bracket Track Bar
@@ -103,7 +102,7 @@ Ordinary Tax · Invest. at 0% · Invest. at 15% · Invest. at 20% · NIIT · Tot
 
 Canvas line chart of **total tax vs. capital gains** at the current OI and dividend levels.
 
-- X-axis: −$3k to $300k. Tick marks at $0, $50k … $300k.
+- X-axis: −$3k to $600k. Tick marks at $0, $100k … $600k.
 - A faint dashed vertical marks the $0 boundary (loss/gain line).
 - Blue dashed vertical + dot marks the current CG slider position.
 - Dashed orange line shows the flat ordinary income tax floor.
@@ -111,7 +110,7 @@ Canvas line chart of **total tax vs. capital gains** at the current OI and divid
 
 X-position mapping: `xp = v => pad.left + ((v - minX) / (maxX - minX)) * cw` where `minX = -3000`.
 
-Dot index: `cIdx = round(((currentCG - (-3000)) / (300000 - (-3000))) * 60)`
+Dot index: `cIdx = round(((currentInvest - (-3000)) / (600000 - (-3000))) * 60)`
 
 ### Breakdown Panel
 
@@ -127,7 +126,7 @@ Dot index: `cIdx = round(((currentCG - (-3000)) / (300000 - (-3000))) * 60)`
 getMarginalRate(taxableOI)      → rate (0.10–0.37) or null if taxableOI = 0
 getOIBracketTiers(taxableOI)    → [{floor, amount, rate, tax}, ...]  only filled tiers
 calcOrdinaryTax(taxableOI)      → total ordinary tax (number)
-calcTax(oi, divs, cg)           → full result object (see below)
+calcTax(oi, invest)             → full result object (see below); invest = QD + LTCG combined
 fmt(n)                          → "$1,234" or "−$3,000" for negatives
 ```
 
@@ -162,8 +161,8 @@ fmt(n)                          → "$1,234" or "−$3,000" for negatives
   noted as plain text in the panel subtitle. This avoids a large inert blue chunk eating visual space.
 - **Unused 0% space is rendered** as a faint ghost segment in the bracket bar so the planning
   headroom is visually obvious.
-- **QD and LTCG are kept as separate sliders** even though they're taxed identically, because
-  dividends are recurring/fixed income and capital gains are the planning decision variable.
+- **QD and LTCG are combined into one Investment Income slider** because they're taxed identically.
+  The slider represents total preferential-rate income; range −$3k to $600k, step $100.
 - **Negative CG display** uses a proper Unicode minus sign (`−`) not a hyphen.
 - **fmt() handles negatives** via `'−$' + Math.round(-n).toLocaleString()`.
 
