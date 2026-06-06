@@ -21,7 +21,14 @@ python3 -m http.server   # optional local server if needed for font loading
 
 There is no build, lint, or test toolchain. Edit `index.html` and reload the browser.
 
+## Web Development
+
+- Before editing JS logic, trace the full data flow from input → calculation → render to avoid partial fixes.
+- When fixing a bug, check whether the same mistake exists in related display elements (e.g. if a value is wrong in a badge, check the breakdown panel too).
+- Prefer computed values from an authoritative source (e.g. a calcTax() result object) over re-deriving the same value inline elsewhere.
+
 ## Development Rules
+
 - All displayed values must be derived from `calcTax()` — never recompute tax logic inline in the UI layer.
 - After any change to `calcTax()`, verify that the bracket bar, headroom badge, metrics grid, breakdown panel, and callout are all consistent.
 - After any structural change, update CLAUDE.md to reflect it before committing.
@@ -95,10 +102,10 @@ niitTax = niitBase * 0.038;
 
 ### Two Sliders
 
-| Slider             | Color                      | Range          | Notes                                                         |
-| ------------------ | -------------------------- | -------------- | ------------------------------------------------------------- |
-| Ordinary Income    | Orange `--orange: #e07b39` | $0 – $300k     | Wages, pension, RMDs, SS, interest, non-QD, short-term gains  |
-| Investment Income  | Green `--green: #3fb950`   | −$3k – $600k   | QD + LTCG combined; negative = net capital loss; starts $60k  |
+| Slider            | Color                      | Range        | Notes                                                        |
+| ----------------- | -------------------------- | ------------ | ------------------------------------------------------------ |
+| Ordinary Income   | Orange `--orange: #e07b39` | $0 – $300k   | Wages, pension, RMDs, SS, interest, non-QD, short-term gains |
+| Investment Income | Green `--green: #3fb950`   | −$3k – $600k | QD + LTCG combined; negative = net capital loss; starts $60k |
 
 Both sliders use `step="100"`. Each has a `.slider-sources` description line and a color-coded rate label on the right.
 The OI slider also renders a `#oiMarginalBadge` pill below it showing the marginal ordinary rate.
