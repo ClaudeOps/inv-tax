@@ -21,6 +21,11 @@ python3 -m http.server   # optional local server if needed for font loading
 
 There is no build, lint, or test toolchain. Edit `index.html` and reload the browser.
 
+## Development Rules
+- All displayed values must be derived from `calcTax()` — never recompute tax logic inline in the UI layer.
+- After any change to `calcTax()`, verify that the bracket bar, headroom badge, metrics grid, breakdown panel, and callout are all consistent.
+- After any structural change, update CLAUDE.md to reflect it before committing.
+
 ---
 
 ## 2026 Tax Parameters (all confirmed unless noted)
