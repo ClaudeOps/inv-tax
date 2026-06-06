@@ -123,9 +123,20 @@
       }
 
       .slider-value {
+        font-family: inherit;
         font-size: 1.05rem;
         font-weight: 500;
         color: var(--accent);
+        background: transparent;
+        border: none;
+        border-bottom: 1px solid transparent;
+        outline: none;
+        width: 92px;
+        cursor: text;
+        padding: 0;
+      }
+      .slider-value:focus {
+        border-bottom-color: var(--accent);
       }
 
       input[type="range"] {
@@ -407,12 +418,13 @@
               <span style="color: var(--orange); font-weight: 500"
                 >Ordinary Income</span
               >
-              <span
+              <input
+                type="text"
                 class="slider-value"
                 id="oiDisplay"
                 style="margin-left: 0.75rem"
-                >$0</span
-              >
+                value="$0"
+              />
             </span>
             <span style="font-size: 0.68rem; color: var(--muted)"
               >taxed at 10%–37%</span
@@ -440,12 +452,13 @@
               <span style="color: var(--green); font-weight: 500"
                 >Investment Income</span
               >
-              <span
+              <input
+                type="text"
                 class="slider-value"
                 id="investDisplay"
                 style="margin-left: 0.75rem"
-                >$60,000</span
-              >
+                value="$60,000"
+              />
             </span>
             <span style="font-size: 0.68rem; color: var(--muted)"
               >taxed at 0% / 15% / 20%</span
@@ -1019,8 +1032,8 @@
         const oi = parseInt(document.getElementById("oiSlider").value);
         const invest = parseInt(document.getElementById("investSlider").value);
 
-        document.getElementById("oiDisplay").textContent = fmt(oi);
-        document.getElementById("investDisplay").textContent = fmt(invest);
+        document.getElementById("oiDisplay").value = fmt(oi);
+        document.getElementById("investDisplay").value = fmt(invest);
 
         const r = calcTax(oi, invest);
         const effRate = r.gross > 0 ? (r.total / r.gross) * 100 : 0;
@@ -1139,6 +1152,35 @@
       document.getElementById("oiSlider").addEventListener("input", update);
       document.getElementById("investSlider").addEventListener("input", update);
       window.addEventListener("resize", () => update());
+
+      function parseDisplayValue(str) {
+        return parseInt(str.replace(/[$,\s]/g, "").replace("−", "-")) || 0;
+      }
+
+      function wireValueInput(inputId, sliderId, min, max) {
+        const input = document.getElementById(inputId);
+        const slider = document.getElementById(sliderId);
+        input.addEventListener("focus", () => {
+          input.value = parseDisplayValue(input.value);
+          input.select();
+        });
+        input.addEventListener("blur", () => {
+          const raw = parseDisplayValue(input.value);
+          const clamped = Math.min(Math.max(raw, min), max);
+          slider.value = clamped;
+          update();
+        });
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") input.blur();
+          if (e.key === "Escape") {
+            input.value = parseDisplayValue(input.value);
+            input.blur();
+          }
+        });
+      }
+
+      wireValueInput("oiDisplay", "oiSlider", 0, 300000);
+      wireValueInput("investDisplay", "investSlider", -3000, 600000);
 
       update();
     </script>
